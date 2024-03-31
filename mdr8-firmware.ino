@@ -2,16 +2,17 @@
   Firmware for MDR8 Midi Controller
   -------------------------------
   Parts:
-    - Pro Micro / Leonardo
+    - Pro Micro / Arduino Leonardo
     - CD74HC4067 Multiplexer
-    - 8x 10Ohm Potentiometer
+    - 8x 100k Potentiometer
   Wiring:
     CD74HC4067:
-      S0 >> 8
-      S0 >> 9
-      S0 >> 10
-      S0 >> 11
-      A0-A7 >> Potetiometer
+      SIG >> A0
+      S0 >> 6
+      S1 >> 7
+      S2 >> 8
+      S3 >> 9
+      C0-C7 >> Potentiometer
   -------------------------------
 */
 
@@ -91,12 +92,6 @@ void readPotis() {
     if (midiChange > 0) {
       controlChange(MIDI_Channel,potCC[i], midiState[i]);
       MidiUSB.flush();
-      Serial.print("PotNUM: ");
-      Serial.print(i);
-      Serial.print(" PotState: ");
-      Serial.print(potState[i]);
-      Serial.print(" MIDIState: ");
-      Serial.println(midiState[i]);
     }
     potPState[i] = potState[i];
     pmidiState[i] = map(potPState[i], 0, 1023, 0, 128);
