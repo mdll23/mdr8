@@ -16,9 +16,8 @@
   -------------------------------
 */
 
-#include "MIDIUSB.h"
-#include "ResponsiveAnalogRead.h"
-#include "CD74HC4067.h"
+#include <MIDIUSB.h>
+#include <ResponsiveAnalogRead.h>
 
 const int N_POTIS = 8;
 const int MIDI_Channel = 0;
