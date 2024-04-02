@@ -18,41 +18,16 @@
 
 #include <MIDIUSB.h>
 #include <ResponsiveAnalogRead.h>
+#include "Mux.h"
 
 const int N_POTIS = 8;
-const int MIDI_Channel = 0;
-
-// Mux control pins
-const int s0 = 6;
-const int s1 = 7;
-const int s2 = 8;
-const int s3 = 9;
+const byte MIDI_Channel = 1;
 
 // Mux "SIG" pin
 const int SIG_pin = 0;
 
-int controlPin[] = {s0, s1, s2, s3};
-int muxChannel[16][4]={
-  {0,0,0,0}, //channel 0
-  {1,0,0,0}, //channel 1
-  {0,1,0,0}, //channel 2
-  {1,1,0,0}, //channel 3
-  {0,0,1,0}, //channel 4
-  {1,0,1,0}, //channel 5
-  {0,1,1,0}, //channel 6
-  {1,1,1,0}, //channel 7
-  {0,0,0,1}, //channel 8
-  {1,0,0,1}, //channel 9
-  {0,1,0,1}, //channel 10
-  {1,1,0,1}, //channel 11
-  {0,0,1,1}, //channel 12
-  {1,0,1,1}, //channel 13
-  {0,1,1,1}, //channel 14
-  {1,1,1,1}  //channel 15
-};
-
 int potPin[N_POTIS] = { 0, 1, 2, 3, 4, 5, 6, 7 };
-int potCC[N_POTIS] = { 24, 25, 26, 27, 20, 21, 22, 23};
+uint8_t potCC[N_POTIS] = { 24, 25, 26, 27, 20, 21, 22, 23};
 
 int potReading[N_POTIS] = { 0 };
 int potPState[N_POTIS] = { 0 };
@@ -74,48 +49,35 @@ void controlChange(byte channel, byte control, byte value) {
   MidiUSB.sendMIDI(event);
 }
 
-void readPotis() {
-  for (int i = 0; i < N_POTIS; i++) {
-    potReading[i] = readMux(i);
-    responsivePot[i].update(potReading[i]);
-    potState[i] = responsivePot[i].getValue();
-    midiState[i] = map(potState[i], 0, 1023, 0, 128);
+Mux mux(6, 7, 8, -1);
 
-    int potVar = abs(potPState[i] - potState[i]);
-    if (potVar > potThreshold) {
-      ppotTime[i] = millis();
-    }
-    potTimer[i] = millis() - ppotTime[i];
-    int midiChange = abs(pmidiState[i] - midiState[i]);
+void readPotis(int num) {
+  potReading[num] = analogRead(SIG_pin);
+  responsivePot[num].update(potReading[num]);
+  potState[num] = responsivePot[num].getValue();
+  midiState[num] = map(potState[num], 0, 1023, 0, 128);
 
-    if (midiChange > 0) {
-      controlChange(MIDI_Channel,potCC[i], midiState[i]);
-      MidiUSB.flush();
-    }
-    potPState[i] = potState[i];
-    pmidiState[i] = map(potPState[i], 0, 1023, 0, 128);
+  int potVar = abs(potPState[num] - potState[num]);
+  if (potVar > potThreshold) {
+    ppotTime[num] = millis();
   }
+  potTimer[num] = millis() - ppotTime[num];
+  int midiChange = abs(pmidiState[num] - midiState[num]);
+
+  if (midiChange > 0) {
+    controlChange(MIDI_Channel,potCC[num], midiState[num]);
+    MidiUSB.flush();
+  }
+  potPState[num] = potState[num];
+  pmidiState[num] = map(potPState[num], 0, 1023, 0, 128);
+
 }
 
-float readMux(int channel){
-  for(int i = 0; i < 4; i ++){
-    digitalWrite(controlPin[i], muxChannel[channel][i]);
-  }
-  int val = analogRead(SIG_pin);
-  return val;
-}
 
 void setup() {
-  pinMode(s0, OUTPUT);
-  pinMode(s1, OUTPUT);
-  pinMode(s2, OUTPUT);
-  pinMode(s3, OUTPUT);
-
-  digitalWrite(s0, LOW);
-  digitalWrite(s1, LOW);
-  digitalWrite(s2, LOW);
-  digitalWrite(s3, LOW);
   Serial.begin(9600);
+  pinMode(9, OUTPUT);
+  digitalWrite(9, 0);
   for (int i = 0; i < N_POTIS; i++) {
     responsivePot[i] = ResponsiveAnalogRead(0, true, snapMultiplier);
     responsivePot[i].setAnalogResolution(1023);
@@ -123,5 +85,8 @@ void setup() {
 }
 
 void loop() {
-  readPotis();
+  for (int i = 0; i < N_POTIS; i++) {
+    mux.channel(i);
+    readPotis(i);
+  }
 }
